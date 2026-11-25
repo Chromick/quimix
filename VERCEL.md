@@ -7,7 +7,14 @@ O deploy na Vercel usa **dois projetos**, porque o Docker Compose (Postgres + 3 
 1. **API** — FastAPI único (`server.py` na raiz), que junta auth + simulação. Ele também sabe servir o `dist` se ele existir, mas no deploy usamos o projeto web separado.
 2. **Web** — Vite/React (`quimix-web`), servido como estático com fallback de SPA.
 
-Projeto de referência: `quimix-api-chromick` (API) e `quimix-web-chromick` (web).
+## Deploy realizado
+
+- Escopo Vercel: `bruno-barrals-projects` (conta `chromick`).
+- Repo conectado: <https://github.com/Chromick/quimix>, branch `main`.
+- API: <https://quimix-api-chromick.vercel.app> (projeto `quimix-api-chromick`).
+- Web: <https://quimix-web-chromick.vercel.app> (projeto `quimix-web-chromick`).
+- Deployment Protection (SSO) desativada nos dois projetos para acesso público.
+- Os pushes em `main` disparam deploys automáticos nos dois projetos.
 
 ## 1. Banco de dados
 
