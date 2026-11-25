@@ -1,6 +1,14 @@
 const configuredBase = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "");
 export const API_BASE_URL =
-  configuredBase || (import.meta.env.DEV ? "http://localhost:8000" : "https://quimix-api.vercel.app");
+  configuredBase || (import.meta.env.DEV ? "http://localhost:8000" : "");
+
+function requireApiBaseUrl(): void {
+  if (!API_BASE_URL) {
+    throw new Error(
+      "VITE_API_BASE_URL não configurado. Defina a URL da API no deploy da Vercel.",
+    );
+  }
+}
 
 const ACCESS_KEY = "quimix_access_token";
 const REFRESH_KEY = "quimix_refresh_token";
@@ -146,6 +154,7 @@ function authHeaders(extra: Record<string, string> = {}): HeadersInit {
 }
 
 async function fetchApi(url: string, init: RequestInit): Promise<Response> {
+  requireApiBaseUrl();
   try {
     return await fetch(url, init);
   } catch {

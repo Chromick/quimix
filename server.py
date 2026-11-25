@@ -7,6 +7,7 @@ No Docker local os três serviços continuam separados.
 from __future__ import annotations
 
 import importlib
+import os
 import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -66,11 +67,20 @@ async def lifespan(_app: FastAPI):
     yield
 
 
+def _cors_origins() -> list[str]:
+    configured = [origin.strip() for origin in os.getenv("CORS_ORIGINS", "").split(",") if origin.strip()]
+    defaults = ["http://localhost:5173", "https://quimix.vercel.app"]
+    return list(dict.fromkeys(defaults + configured))
+
+
+_raw_regex = os.getenv("CORS_ORIGIN_REGEX", r"https://quimix[a-z0-9-]*\.vercel\.app").strip()
+CORS_ORIGIN_REGEX = None if _raw_regex.lower() in {"", "none", "false", "disable", "disabled"} else _raw_regex
+
 app = FastAPI(title="Quimix", version="0.1.0", docs_url="/docs", redoc_url=None, lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "https://quimix.vercel.app"],
-    allow_origin_regex=r"https://quimix[a-z0-9-]*\.vercel\.app",
+    allow_origins=_cors_origins(),
+    allow_origin_regex=CORS_ORIGIN_REGEX,
     allow_credentials=False,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "Accept"],
