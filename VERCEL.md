@@ -72,4 +72,4 @@ Modelo em `quimix-web/.env.production.example`.
 
 - `quimix.vercel.app` e `quimix-api.vercel.app` **não devem ser reutilizados**: hoje o primeiro serve outro app e o segundo responde 404. Use os domínios que a Vercel te der ou configure domínios próprios.
 - O `docker-compose` local continua funcionando normalmente; nada foi mudado nele.
-- Para atualizar o fork com o upstream: `git fetch upstream && git merge upstream/main`.
+- Para atualizar o fork com o upstream (uma vez): `git remote add upstream https://github.com/LuanaPZenha/quimix.git`. Depois: `git fetch upstream && git merge upstream/main`.
