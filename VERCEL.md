@@ -24,6 +24,7 @@ Quando as duas variáveis estão preenchidas, o `database.py` monta a URL `sqlit
 
 - Vercel → **Add New… → Project** → importe <https://github.com/Chromick/quimix>.
 - **Root Directory:** `.` (raiz do repo).
+- **Entrypoint:** `api/index.py` importa o `app` do `server.py`; `vercel.json` reescreve todas as rotas para `/api/index`.
 - **Framework:** Python / FastAPI (detectado automaticamente).
 - **Build Command / Output:** deixe o padrão.
 - **Production Branch:** `main`.
@@ -73,6 +74,7 @@ Modelo em `quimix-web/.env.production.example`.
 
 - `quimix-web/src/api/client.ts`: removido o fallback fixo para `https://quimix-api.vercel.app` (hoje fora do ar) e adicionado erro claro quando `VITE_API_BASE_URL` não é configurado.
 - `server.py`: `CORS_ORIGINS` e `CORS_ORIGIN_REGEX` passam a ser lidos de variáveis de ambiente; o comportamento antigo continua como padrão.
+- `api/index.py` + `vercel.json`: entrypoint Python exigido pela Vercel (`api/`) e rewrite de todas as rotas para a API.
 - `quimix-auth-service/app/config.py` e `app/infrastructure/database.py`: suporte a Turso/libSQL trazido da versão original (`Quimix.zip`).
 - `requirements.txt`: adicionado `sqlalchemy-libsql==0.2.0`.
 - `quimix-auth-service/tests/unit/test_turso_url.py`: testes da conversão de URL Turso.
