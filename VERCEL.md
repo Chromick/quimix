@@ -7,11 +7,18 @@ O deploy na Vercel usa **dois projetos**, porque o Docker Compose (Postgres + 3 
 1. **API** — FastAPI único (`server.py` na raiz), que junta auth + simulação. Ele também sabe servir o `dist` se ele existir, mas no deploy usamos o projeto web separado.
 2. **Web** — Vite/React (`quimix-web`), servido como estático com fallback de SPA.
 
+Projeto de referência: `quimix-api-chromick` (API) e `quimix-web-chromick` (web).
+
 ## 1. Banco de dados
 
-Crie um Postgres gerenciado (Neon, Supabase, Render, etc.). Use um database próprio, por exemplo `quimix_auth`. Guarde a connection string.
+A versão original traz suporte a **Turso/libSQL** no `quimix-auth-service`:
 
-> O padrão do código é `sqlite:///./quimix_auth.db`. Isso **não serve na Vercel**: o filesystem é efêmero e a escrita no diretório do projeto não é permitida. Sem `DATABASE_URL`, cadastro/login não vão persistir.
+- `TURSO_DATABASE_URL` — ex.: `libsql://quimix-auth-<org>.turso.io`
+- `TURSO_AUTH_TOKEN` — token de acesso do banco
+
+Quando as duas variáveis estão preenchidas, o `database.py` monta a URL `sqlite+libsql://...?secure=true` e usa o token. Sem elas, cai no `DATABASE_URL` padrão (`sqlite:///./quimix_auth.db`), que **não serve na Vercel** (filesystem efêmero).
+
+> As credenciais usadas no deploy vieram do `Quimix.zip` da pasta Downloads (`quimix-infra/.env`).
 
 ## 2. Projeto da API
 
@@ -21,18 +28,19 @@ Crie um Postgres gerenciado (Neon, Supabase, Render, etc.). Use um database pró
 - **Build Command / Output:** deixe o padrão.
 - **Production Branch:** `main`.
 
-Environment Variables (copie os nomes de `vercel-api.env.example`):
+Environment Variables (modelo em `vercel-api.env.example`):
 
 | Variável | Valor |
 | --- | --- |
 | `APP_ENV` | `production` |
-| `DATABASE_URL` | `postgresql+psycopg://USUARIO:SENHA@HOST:5432/quimix_auth?sslmode=require` |
+| `TURSO_DATABASE_URL` | URL `libsql://...` do banco de auth |
+| `TURSO_AUTH_TOKEN` | token do Turso |
 | `JWT_SECRET` | string aleatória com 32+ caracteres |
-| `CORS_ORIGINS` | URL do projeto da web (ex.: `https://quimix-web-seu-usuario.vercel.app`) |
-| `CORS_ORIGIN_REGEX` | `none` para desativar o regex padrão `quimix*.vercel.app` |
+| `CORS_ORIGINS` | `https://quimix-web-chromick.vercel.app` |
+| `CORS_ORIGIN_REGEX` | `none` |
 | `SEED_ADMIN_ENABLED` | `false` |
 
-Depois de publicar, anote a URL da API (ex.: `https://quimix-api-seu-usuario.vercel.app`) e teste:
+Depois de publicar, teste:
 
 - `GET /health` → `{"status":"ok","service":"quimix"}`
 - `GET /docs` → OpenAPI
@@ -50,22 +58,24 @@ Environment Variable **de build** (ela é embutida no JS, então precisa existir
 
 | Variável | Valor |
 | --- | --- |
-| `VITE_API_BASE_URL` | URL do projeto da API, sem barra no final |
+| `VITE_API_BASE_URL` | `https://quimix-api-chromick.vercel.app` |
 
 Modelo em `quimix-web/.env.production.example`.
 
 ## 4. Ordem recomendada
 
-1. Criar o Postgres.
-2. Publicar a **API** e copiar a URL.
-3. Publicar a **Web** com `VITE_API_BASE_URL` apontando para essa URL.
-4. Adicionar a URL da Web em `CORS_ORIGINS` na API e fazer um **Redeploy** da API.
-5. Testar cadastro → login → simulação.
+1. Publicar a **API** com as variáveis do item 2.
+2. Publicar a **Web** com `VITE_API_BASE_URL` apontando para a API.
+3. Conferir `CORS_ORIGINS` na API e fazer redeploy se necessário.
+4. Testar cadastro → login → simulação.
 
 ## 5. Ajustes já feitos neste fork
 
 - `quimix-web/src/api/client.ts`: removido o fallback fixo para `https://quimix-api.vercel.app` (hoje fora do ar) e adicionado erro claro quando `VITE_API_BASE_URL` não é configurado.
-- `server.py`: `CORS_ORIGINS` e `CORS_ORIGIN_REGEX` passam a ser lidos de variáveis de ambiente; o comportamento antigo (`localhost:5173`, `quimix.vercel.app`, regex `quimix*.vercel.app`) continua como padrão.
+- `server.py`: `CORS_ORIGINS` e `CORS_ORIGIN_REGEX` passam a ser lidos de variáveis de ambiente; o comportamento antigo continua como padrão.
+- `quimix-auth-service/app/config.py` e `app/infrastructure/database.py`: suporte a Turso/libSQL trazido da versão original (`Quimix.zip`).
+- `requirements.txt`: adicionado `sqlalchemy-libsql==0.2.0`.
+- `quimix-auth-service/tests/unit/test_turso_url.py`: testes da conversão de URL Turso.
 - `vercel-api.env.example` e `quimix-web/.env.production.example`: modelos de configuração.
 
 ## 6. Observações

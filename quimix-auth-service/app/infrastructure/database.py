@@ -27,20 +27,44 @@ class UserRow(Base):
 
 
 def _connect_args(url: str) -> dict:
-    if url.startswith("sqlite"):
+    if url.startswith("sqlite") and not url.startswith("sqlite+libsql"):
         return {"check_same_thread": False}
     return {}
 
 
-_engine_kwargs: dict = {
-    "future": True,
-    "connect_args": _connect_args(settings.database_url),
-}
-if settings.database_url.startswith("postgresql"):
-    _engine_kwargs["poolclass"] = NullPool
-    _engine_kwargs["pool_pre_ping"] = True
+def _turso_sqlalchemy_url(raw: str) -> str:
+    url = raw.strip()
+    if url.startswith("libsql://"):
+        url = "sqlite+" + url
+    elif url.startswith("https://"):
+        url = "sqlite+libsql://" + url.removeprefix("https://")
+    if "secure=" not in url:
+        url = f"{url}{'&' if '?' in url else '?'}secure=true"
+    return url
 
-engine = create_engine(settings.database_url, **_engine_kwargs)
+
+def _create_engine():
+    turso_url = settings.turso_database_url.strip()
+    if turso_url:
+        token = settings.turso_auth_token.strip()
+        if not token:
+            raise RuntimeError("TURSO_AUTH_TOKEN é obrigatório quando TURSO_DATABASE_URL está definido.")
+        return create_engine(
+            _turso_sqlalchemy_url(turso_url),
+            connect_args={"auth_token": token},
+            poolclass=NullPool,
+            pool_pre_ping=True,
+        )
+
+    url = settings.database_url
+    kwargs: dict = {"future": True, "connect_args": _connect_args(url)}
+    if url.startswith("postgresql"):
+        kwargs["poolclass"] = NullPool
+        kwargs["pool_pre_ping"] = True
+    return create_engine(url, **kwargs)
+
+
+engine = _create_engine()
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
 
 
